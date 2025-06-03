@@ -1,90 +1,82 @@
-local names = {
-	["aatrox"] = true,
-	["akali"] = true,
-	["ambessa"] = true,
-	["aurora"] = true,
-	["camille"] = true,
-	["cho'gath"] = true,
-	["darius"] = true,
-	["dr. mundo"] = true,
-	["fiora"] = true,
-	["gangplank"] = true,
-	["garen"] = true,
-	["gnar"] = true,
-	["gragas"] = true,
-	["gwen"] = true,
-	["heimerdinger"] = true,
-	["illaoi"] = true,
-	["irelia"] = true,
-	["jax"] = true,
-	["jayce"] = true,
-	["k'sante"] = true,
-	["karma"] = true,
-	["kayle"] = true,
-	["kennen"] = true,
-	["kled"] = true,
-	["malphite"] = true,
-	["mordekaiser"] = true,
-	["nasus"] = true,
-	["olaf"] = true,
-	["ornn"] = true,
-	["pantheon"] = true,
-	["poppy"] = true,
-	["quinn"] = true,
-	["renekton"] = true,
-	["rengar"] = true,
-	["riven"] = true,
-	["rumble"] = true,
-	["sett"] = true,
-	["shen"] = true,
-	["singed"] = true,
-	["sion"] = true,
-	["skarner"] = true,
-	["smolder"] = true,
-	["sylas"] = true,
-	["tahm kench"] = true,
-	["teemo"] = true,
-	["trundle"] = true,
-	["tryndamere"] = true,
-	["twisted fate"] = true,
-	["udyr"] = true,
-	["urgot"] = true,
-	["vayne"] = true,
-	["vladimir"] = true,
-	["volibear"] = true,
-	["warwick"] = true,
-	["wukong"] = true,
-	["yasuo"] = true,
-	["yone"] = true,
-	["yorick"] = true,
-	["zac"] = true,
-}
+local M = {}
 
-local aliases = {
-	aa = "aatrox",
-	atrox = "aatrox",
-	chogath = "cho'gath",
-	cho = "cho'gath",
-	gp = "gangplank",
-	bomba = "gragas",
-	gargar = "gragas",
-	heimer = "heimerdinger",
-	ksante = "k'sante",
-	malph = "malphite",
-	rock = "malphite",
-	rocha = "malphite",
-	morde = "mordekaiser",
-	panth = "pantheon",
-	renek = "renekton",
-	tk = "tahm kench",
-	trynda = "tryndamere",
-	tf = "twisted fate",
-	vlad = "vladimir",
-	voli = "volibear",
-	ww = "warwick",
-}
+local names = "./dev/names"
+local aliases = "./dev/aliases"
 
-return function(name)
-	name = name:lower()
-	return names[name] and name or aliases[name]
+local function escape(text)
+	return text:gsub("([^%w])", "%%%1")
 end
+
+local function get_alias(alias)
+	io.open(aliases, "a"):close()
+	local file, err = io.open(aliases, "r")
+	if not file then
+		print("get_alias: " .. err)
+		return
+	end
+	local name
+	for line in file:lines() do
+		name = line:match("^" .. escape(alias) .. "=(.*)")
+		if name then
+			break
+		end
+	end
+	file:close()
+	return name
+end
+
+local function get_name(name)
+	io.open(names, "a"):close()
+	local file, err = io.open(names, "r")
+	if not file then
+		print("get_name: " .. err)
+		return
+	end
+	for line in file:lines() do
+		if line:match("^" .. escape(name) .. "$") then
+			file:close()
+			return name
+		end
+	end
+	file:close()
+	return nil
+end
+
+M.name = function(name)
+	return get_alias(name) or get_name(name)
+end
+
+M.add = function(name)
+	if get_name(name) then
+		return nil, "This character is already added!"
+	end
+
+	local file, err = io.open(names, "a")
+	if not file then
+		print("add: " .. err)
+		return nil
+	end
+	file:write(name .. "\n")
+	file:close()
+	return name
+end
+
+M.add_alias = function(alias, name)
+	if not get_name(name) then
+		return nil, "There is no such character :("
+	end
+	if get_alias(alias) then
+		return nil, "This alias is already defined!"
+	end
+
+	local file, err = io.open(aliases, "a")
+	if not file then
+		print("add_alias: " .. err)
+		return nil
+	end
+	file:write(alias .. "=" .. name .. "\n")
+	file:close()
+	return name
+end
+
+return M
